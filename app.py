@@ -1,5 +1,6 @@
 import streamlit as st
 from PIL import Image
+from detector import detect
 
 # This must be the first Streamlit command in the file
 st.set_page_config(page_title="Dental X-Ray Planner", page_icon="🦷", layout="centered")
@@ -296,11 +297,21 @@ uploaded_file = st.file_uploader(upload_label, type=["jpg", "jpeg", "png"])
 st.markdown('<div class="step-title">Step 3: Result</div>', unsafe_allow_html=True)
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded image", use_container_width=True)
 
-    # TEMPORARY: simulated detection until Model A and Model B are ready
-    detected = st.selectbox("Simulated detection (temporary):", conditions)
+    # Run the right model (Model A for X-ray, Model B for photo)
+    detections = detect(image, input_type)
+
+    # Pick the detection with the highest confidence
+    detected = "no clear finding"
+    confidence = 0.0
+    for name, score in detections:
+        if score > confidence:
+            detected = name
+            confidence = score
+
+    st.caption("Confidence: " + str(round(confidence * 100, 1)) + " %")
 
     plan = get_plan(detected)
     urgency_class = "urgency-" + plan["urgency"].lower()
