@@ -5,6 +5,9 @@ from detector import detect
 # This must be the first Streamlit command in the file
 st.set_page_config(page_title="Dental X-Ray Planner", page_icon="🦷", layout="centered")
 
+# Results below this confidence get a warning (0.5 means 50 percent).
+LOW_CONFIDENCE = 0.5
+
 # ------------------------------------------------------------------
 # Treatment logic engine (rule based)
 # ------------------------------------------------------------------
@@ -312,6 +315,12 @@ if uploaded_file is not None:
             confidence = score
 
     st.caption("Confidence: " + str(round(confidence * 100, 1)) + " %")
+
+    # Warn the user when the result is weak or missing
+    if detected == "no clear finding":
+        st.warning("No clear finding. Please try a clearer image or see a dentist.")
+    elif confidence < LOW_CONFIDENCE:
+        st.warning("Low confidence result. Please do not rely on it and ask a dentist.")
 
     plan = get_plan(detected)
     urgency_class = "urgency-" + plan["urgency"].lower()
