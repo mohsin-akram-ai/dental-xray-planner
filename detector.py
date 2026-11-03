@@ -43,7 +43,12 @@ def get_model(input_type):
 
 
 def detect(image, input_type):
-    """Run the right model on a PIL image and return a list of (name, confidence)."""
+    """Run the right model on a PIL image.
+
+    Returns two things:
+    1. a list of (name, confidence) pairs
+    2. the same image with boxes drawn on it (in BGR color order)
+    """
     model = get_model(input_type)
     results = model(image, conf=MIN_CONFIDENCE)
     result = results[0]
@@ -55,4 +60,7 @@ def detect(image, input_type):
         confidence = float(box.conf[0])
         found.append((name, confidence))
 
-    return found
+    # plot() draws the boxes and labels and returns the image as an array
+    annotated = result.plot()
+
+    return found, annotated
