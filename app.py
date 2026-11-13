@@ -77,6 +77,16 @@ else:
 st.markdown('<div class="step-title">Step 2: Upload image</div>', unsafe_allow_html=True)
 uploaded_file = st.file_uploader(upload_label, type=["jpg", "jpeg", "png"])
 
+# The user chooses how sure the model must be before a finding is shown.
+min_conf = st.slider(
+    "Minimum confidence",
+    min_value=0.10,
+    max_value=0.90,
+    value=0.25,
+    step=0.05,
+    help="Lower value shows more findings (some may be wrong). Higher value shows fewer findings (some may be missed).",
+)
+
 # ------------------------------------------------------------------
 # Step 3: result
 # ------------------------------------------------------------------
@@ -87,7 +97,7 @@ if uploaded_file is not None:
 
     # Run the right model (Model A for X-ray, Model B for photo)
     with st.spinner("Analyzing image..."):
-        detections, annotated = detect(image, input_type)
+        detections, annotated = detect(image, input_type, min_conf)
 
     # Show the image with the detection boxes drawn on it
     st.image(annotated, caption="Detection result", channels="BGR", width="stretch")
@@ -95,7 +105,7 @@ if uploaded_file is not None:
     groups = group_detections(detections)
 
     if len(groups) == 0:
-        st.warning("No clear finding. Please try a clearer image or see a dentist.")
+        st.warning("No clear finding. Try a lower minimum confidence, a clearer image, or see a dentist.")
     else:
         # Find the highest confidence among all findings
         top_confidence = 0.0
@@ -104,7 +114,8 @@ if uploaded_file is not None:
                 top_confidence = groups[name]["best"]
 
         st.caption(
-            "Total findings: " + str(len(detections))
+            "Minimum confidence: " + str(round(min_conf * 100)) + " %"
+            + " | Total findings: " + str(len(detections))
             + " | Different conditions: " + str(len(groups))
         )
 

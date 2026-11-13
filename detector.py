@@ -11,7 +11,7 @@ MODEL_PATHS = {
 # Used when a dental model file is not available yet.
 FALLBACK_MODEL = "yolov8n.pt"
 
-# Ignore detections below this confidence (0.25 means 25 percent).
+# Default: ignore detections below this confidence (0.25 means 25 percent).
 MIN_CONFIDENCE = 0.25
 
 # Models that are already loaded are kept here, so we load each one only once.
@@ -42,15 +42,17 @@ def get_model(input_type):
     return model
 
 
-def detect(image, input_type):
+def detect(image, input_type, min_conf=MIN_CONFIDENCE):
     """Run the right model on a PIL image.
+
+    min_conf is the lowest confidence we accept (0.25 means 25 percent).
 
     Returns two things:
     1. a list of (name, confidence) pairs
     2. the same image with boxes drawn on it (in BGR color order)
     """
     model = get_model(input_type)
-    results = model(image, conf=MIN_CONFIDENCE)
+    results = model(image, conf=min_conf)
     result = results[0]
 
     found = []
