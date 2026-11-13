@@ -2,6 +2,7 @@ import streamlit as st
 from PIL import Image
 
 from detector import detect
+from rules import get_plan
 from styles import HEADER, STYLE
 
 # This must be the first Streamlit command in the file
@@ -10,52 +11,47 @@ st.set_page_config(page_title="Dental X-Ray Planner", page_icon="🦷", layout="
 # Results below this confidence get a warning (0.5 means 50 percent).
 LOW_CONFIDENCE = 0.5
 
-# ------------------------------------------------------------------
-# Treatment logic engine (rule based)
-# ------------------------------------------------------------------
-RULES = {
-    "caries": {
-        "treatment": "Filling or Root Canal Treatment (RCT) may be needed. The dentist will decide after examining the tooth.",
-        "urgency": "Medium",
-    },
-    "periapical lesion": {
-        "treatment": "Possible infection at the root tip. See a dentist soon. Root Canal Treatment (RCT) or other treatment may be needed.",
-        "urgency": "High",
-    },
-    "impacted tooth": {
-        "treatment": "A dentist or oral surgeon should check whether the tooth needs to be removed.",
-        "urgency": "Medium",
-    },
-    "calculus": {
-        "treatment": "Scaling and cleaning recommended.",
-        "urgency": "Low",
-    },
-    "gingivitis": {
-        "treatment": "Scaling, regular brushing and flossing, and an antiseptic mouthwash as advised by a dentist.",
-        "urgency": "Low",
-    },
-    "mouth ulcer": {
-        "treatment": "Keep an eye on it. If it lasts more than two weeks, see a dentist.",
-        "urgency": "Low",
-    },
-    "discoloration": {
-        "treatment": "Polishing or whitening may help. Ask a dentist which option is suitable.",
-        "urgency": "Low",
-    },
-    "hypodontia": {
-        "treatment": "Discuss orthodontic or prosthetic options with a dentist.",
-        "urgency": "Medium",
-    },
-}
-
-DEFAULT_RULE = {
-    "treatment": "Please see a dentist for a proper examination.",
-    "urgency": "Medium",
-}
+# Used to show the most urgent findings first (0 comes first).
+URGENCY_ORDER = {"High": 0, "Medium": 1, "Low": 2}
 
 
-def get_plan(condition):
-    return RULES.get(condition, DEFAULT_RULE)
+def group_detections(detections):
+    """Group the detections by name.
+
+    Example: [("caries", 0.7), ("caries", 0.5)] becomes
+    {"caries": {"count": 2, "best": 0.7}}
+    """
+    groups = {}
+    for name, score in detections:
+        if name not in groups:
+            groups[name] = {"count": 0, "best": 0.0}
+        groups[name]["count"] += 1
+        if score > groups[name]["best"]:
+            groups[name]["best"] = score
+    return groups
+
+
+def make_card(name, count, best):
+    """Build the HTML report card for one condition."""
+    plan = get_plan(name)
+    urgency_class = "urgency-" + plan["urgency"].lower()
+
+    if count == 1:
+        found_text = "Found 1 time"
+    else:
+        found_text = "Found " + str(count) + " times"
+
+    return (
+        '<div class="report">'
+        '<p class="label">Detected condition</p>'
+        '<p class="value">' + name.title() + "</p>"
+        '<p class="text">' + found_text + ". Highest confidence: "
+        + str(round(best * 100, 1)) + " %</p>"
+        '<p class="label">Suggested treatment</p>'
+        '<p class="text">' + plan["treatment"] + "</p>"
+        '<span class="urgency ' + urgency_class + '">Urgency: ' + plan["urgency"] + "</span>"
+        "</div>"
+    )
 
 
 # ------------------------------------------------------------------
@@ -96,35 +92,37 @@ if uploaded_file is not None:
     # Show the image with the detection boxes drawn on it
     st.image(annotated, caption="Detection result", channels="BGR", width="stretch")
 
-    # Pick the detection with the highest confidence
-    detected = "no clear finding"
-    confidence = 0.0
-    for name, score in detections:
-        if score > confidence:
-            detected = name
-            confidence = score
+    groups = group_detections(detections)
 
-    st.caption("Confidence: " + str(round(confidence * 100, 1)) + " %")
-
-    # Warn the user when the result is weak or missing
-    if detected == "no clear finding":
+    if len(groups) == 0:
         st.warning("No clear finding. Please try a clearer image or see a dentist.")
-    elif confidence < LOW_CONFIDENCE:
-        st.warning("Low confidence result. Please do not rely on it and ask a dentist.")
+    else:
+        # Find the highest confidence among all findings
+        top_confidence = 0.0
+        for name in groups:
+            if groups[name]["best"] > top_confidence:
+                top_confidence = groups[name]["best"]
 
-    plan = get_plan(detected)
-    urgency_class = "urgency-" + plan["urgency"].lower()
+        st.caption(
+            "Total findings: " + str(len(detections))
+            + " | Different conditions: " + str(len(groups))
+        )
 
-    report = (
-        '<div class="report">'
-        '<p class="label">Detected condition</p>'
-        '<p class="value">' + detected.title() + "</p>"
-        '<p class="label">Suggested treatment</p>'
-        '<p class="text">' + plan["treatment"] + "</p>"
-        '<span class="urgency ' + urgency_class + '">Urgency: ' + plan["urgency"] + "</span>"
-        "</div>"
-    )
-    st.markdown(report, unsafe_allow_html=True)
+        if top_confidence < LOW_CONFIDENCE:
+            st.warning("Low confidence result. Please do not rely on it and ask a dentist.")
+
+        # Sort: High urgency first, then by highest confidence
+        rows = []
+        for name in groups:
+            plan = get_plan(name)
+            order = URGENCY_ORDER[plan["urgency"]]
+            rows.append((order, -groups[name]["best"], name))
+        rows.sort()
+
+        # Show one card for each condition
+        for order, negative_best, name in rows:
+            card = make_card(name, groups[name]["count"], groups[name]["best"])
+            st.markdown(card, unsafe_allow_html=True)
 else:
     st.write("Upload an image to see the result here.")
 
