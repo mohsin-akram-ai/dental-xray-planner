@@ -83,3 +83,45 @@ DEFAULT_RULE = {
 
 def get_plan(condition):
     return RULES.get(condition, DEFAULT_RULE)
+
+
+# ------------------------------------------------------------------
+# How much the user can trust each finding.
+# Levels come from the mAP50 score on the test images (Box):
+#   Good = 75 percent or more, Fair = 45 to 75 percent, Low = below 45 percent.
+# ------------------------------------------------------------------
+GOOD_NOTE = "The model did well on test images for this finding."
+FAIR_NOTE = "The model is only partly accurate for this finding. Please confirm with a dentist."
+
+RELIABILITY = {
+    "implant": {"level": "Good", "note": GOOD_NOTE},
+    "impacted tooth": {"level": "Good", "note": GOOD_NOTE},
+    "mandibular canal": {"level": "Good", "note": GOOD_NOTE},
+    "crown": {"level": "Good", "note": GOOD_NOTE},
+    "maxillary sinus": {"level": "Good", "note": GOOD_NOTE},
+    "filling": {"level": "Fair", "note": FAIR_NOTE},
+    "missing teeth": {"level": "Fair", "note": FAIR_NOTE},
+    "root canal treatment": {"level": "Fair", "note": FAIR_NOTE},
+    "root piece": {"level": "Fair", "note": FAIR_NOTE},
+    "caries": {
+        "level": "Low",
+        "note": "The model often misses caries and sometimes marks healthy areas. Please check with a dentist.",
+    },
+    "periapical lesion": {
+        "level": "Low",
+        "note": "The model misses many periapical lesions. A missing result does not mean there is no infection.",
+    },
+    "retained root": {
+        "level": "Not tested",
+        "note": "The model saw very few examples of this finding and was not tested on it.",
+    },
+}
+
+DEFAULT_RELIABILITY = {
+    "level": "Not tested",
+    "note": "No accuracy test has been done for this finding yet.",
+}
+
+
+def get_reliability(condition):
+    return RELIABILITY.get(condition, DEFAULT_RELIABILITY)

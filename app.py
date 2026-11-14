@@ -2,7 +2,7 @@ import streamlit as st
 from PIL import Image
 
 from detector import detect
-from rules import get_plan
+from rules import get_plan, get_reliability
 from styles import HEADER, STYLE
 
 # This must be the first Streamlit command in the file
@@ -13,6 +13,14 @@ LOW_CONFIDENCE = 0.5
 
 # Used to show the most urgent findings first (0 comes first).
 URGENCY_ORDER = {"High": 0, "Medium": 1, "Low": 2}
+
+# Text color for each reliability level.
+RELIABILITY_COLORS = {
+    "Good": "#2ecc71",
+    "Fair": "#f1c40f",
+    "Low": "#e74c3c",
+    "Not tested": "#95a5a6",
+}
 
 
 def group_detections(detections):
@@ -36,6 +44,9 @@ def make_card(name, count, best):
     plan = get_plan(name)
     urgency_class = "urgency-" + plan["urgency"].lower()
 
+    reliability = get_reliability(name)
+    reliability_color = RELIABILITY_COLORS.get(reliability["level"], "#95a5a6")
+
     if count == 1:
         found_text = "Found 1 time"
     else:
@@ -50,6 +61,10 @@ def make_card(name, count, best):
         '<p class="label">Suggested treatment</p>'
         '<p class="text">' + plan["treatment"] + "</p>"
         '<span class="urgency ' + urgency_class + '">Urgency: ' + plan["urgency"] + "</span>"
+        '<p class="text" style="margin-top: 14px;">'
+        '<span style="color: ' + reliability_color + '; font-weight: 700;">'
+        "Model reliability: " + reliability["level"] + "</span><br>"
+        + reliability["note"] + "</p>"
         "</div>"
     )
 
