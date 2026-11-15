@@ -53,6 +53,8 @@ RULES = {
     },
 
     # ---------- Photo model (Model B) ----------
+    # These names must match the class names in the photo dataset (data.yaml).
+    # Note: the dataset spells "discolation" this way, so we use the same spelling here.
     "calculus": {
         "treatment": "Scaling and cleaning recommended.",
         "urgency": "Low",
@@ -61,11 +63,11 @@ RULES = {
         "treatment": "Scaling, regular brushing and flossing, and an antiseptic mouthwash as advised by a dentist.",
         "urgency": "Low",
     },
-    "mouth ulcer": {
+    "ulcer": {
         "treatment": "Keep an eye on it. If it lasts more than two weeks, see a dentist.",
         "urgency": "Low",
     },
-    "discoloration": {
+    "tooth discolation": {
         "treatment": "Polishing or whitening may help. Ask a dentist which option is suitable.",
         "urgency": "Low",
     },
